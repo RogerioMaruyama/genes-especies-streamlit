@@ -3,6 +3,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.io as pio
 import os
 import tempfile
 import zipfile
@@ -78,16 +79,26 @@ if zip_file is not None:
                 st.markdown(f"✅ Genes mantidos: **{len(genes_filtrados)}**")
                 st.markdown(f"✅ Espécies representadas após filtro: **{len(especies_retidas)}**")
 
-                if len(genes_filtrados) > 0:
+                if len(genes_filtrados) > 0 and len(especies_retidas) > 0:
                     altura = min(max(300, 20 * len(genes_filtrados)), 1200)
+                    largura = min(max(600, 12 * len(especies_retidas)), 2000)
+
                     fig = px.imshow(
                         matriz_filtrada.loc[genes_filtrados, especies_retidas],
                         labels=dict(x="Espécies", y="Genes", color="Presente"),
                         color_continuous_scale="Blues",
                         aspect="auto"
                     )
-                    fig.update_layout(height=altura)
+                    fig.update_layout(height=altura, width=largura)
                     st.plotly_chart(fig, use_container_width=True)
+
+                    # Exportação de imagem
+                    st.markdown("### Exportar gráfico como imagem:")
+                    export_format = st.selectbox("Escolha o formato", ["png", "jpeg", "pdf"])
+                    export_path = os.path.join(tempdir, f"heatmap_exportado.{export_format}")
+                    pio.write_image(fig, export_path, format=export_format)
+                    with open(export_path, "rb") as file:
+                        st.download_button("📤 Baixar imagem do gráfico", data=file, file_name=f"heatmap.{export_format}")
 
                 with st.expander("🔍 Ver tabela de genes mantidos"):
                     st.dataframe(matriz_filtrada)
