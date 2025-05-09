@@ -81,7 +81,7 @@ if zip_file is not None:
 
                 if len(genes_filtrados) > 0 and len(especies_retidas) > 0:
                     altura = min(max(300, 20 * len(genes_filtrados)), 1200)
-                    largura = min(max(600, 12 * len(especies_retidas)), 2000)
+                    largura = min(max(600, 12 * len(especies_retidas)), 4000)
 
                     fig = px.imshow(
                         matriz_filtrada.loc[genes_filtrados, especies_retidas],
@@ -92,13 +92,12 @@ if zip_file is not None:
                     fig.update_layout(height=altura, width=largura)
                     st.plotly_chart(fig, use_container_width=True)
 
-                    # Exportação de imagem
-                    st.markdown("### Exportar gráfico como imagem:")
-                    export_format = st.selectbox("Escolha o formato", ["png", "jpeg", "pdf"])
-                    export_path = os.path.join(tempdir, f"heatmap_exportado.{export_format}")
-                    pio.write_image(fig, export_path, format=export_format)
-                    with open(export_path, "rb") as file:
-                        st.download_button("📤 Baixar imagem do gráfico", data=file, file_name=f"heatmap.{export_format}")
+                    # Exportação de imagem como SVG (compatível com Streamlit Cloud)
+                    st.markdown("### Exportar gráfico como imagem (formato SVG):")
+                    svg_path = os.path.join(tempdir, "heatmap_exportado.svg")
+                    pio.write_image(fig, svg_path, format="svg")
+                    with open(svg_path, "rb") as file:
+                        st.download_button("📤 Baixar gráfico em SVG", data=file, file_name="heatmap.svg")
 
                 with st.expander("🔍 Ver tabela de genes mantidos"):
                     st.dataframe(matriz_filtrada)
