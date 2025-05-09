@@ -1,80 +1,86 @@
-# Script Streamlit: Visualização Interativa de Genes por Espécie
+# Script Streamlit: Visualização Interativa de Genes por Espécie via Upload de .zip
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+import tempfile
+import zipfile
 from Bio import SeqIO
 
 st.set_page_config(layout="wide")
 
-st.title("Filtragem Interativa de Genes por Cobertura de Espécies")
+st.title("Filtragem Interativa de Genes por Cobertura de Espécies (.zip)")
 
-# === CONFIGURAÇÃO ===
-pasta_alinhamentos = st.text_input("Caminho da pasta com arquivos .fasta/.fas:", value="C:/Users/User/CAMINHO/PARA/SEUS/ARQUIVOS")
+# === Upload do .zip ===
+zip_file = st.file_uploader("Faça upload de um arquivo .zip contendo arquivos .fasta/.fas:", type="zip")
+
 extensoes_aceitas = ('.fasta', '.fas')
 
-if pasta_alinhamentos and os.path.isdir(pasta_alinhamentos):
-    # === COLETA DE DADOS ===
-    genes_especies = {}
-    for arquivo in os.listdir(pasta_alinhamentos):
-        if not arquivo.endswith(extensoes_aceitas):
-            continue
+if zip_file is not None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        zip_path = os.path.join(tempdir, "dados.zip")
+        with open(zip_path, "wb") as f:
+            f.write(zip_file.read())
 
-        caminho = os.path.join(pasta_alinhamentos, arquivo)
-        nome_gene = os.path.splitext(arquivo)[0]
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(tempdir)
 
-        try:
-            especies = set()
-            for seq in SeqIO.parse(caminho, "fasta"):
-                especies.add(seq.id.strip())
+        arquivos = [f for f in os.listdir(tempdir) if f.endswith(extensoes_aceitas)]
+        if not arquivos:
+            st.error("Nenhum arquivo .fasta ou .fas encontrado no .zip.")
+        else:
+            genes_especies = {}
+            for arquivo in arquivos:
+                caminho = os.path.join(tempdir, arquivo)
+                nome_gene = os.path.splitext(arquivo)[0]
 
-            if especies:
-                genes_especies[nome_gene] = especies
+                try:
+                    especies = set()
+                    for seq in SeqIO.parse(caminho, "fasta"):
+                        especies.add(seq.id.strip())
 
-        except Exception as e:
-            st.warning(f"Erro no arquivo {arquivo}: {e}")
+                    if especies:
+                        genes_especies[nome_gene] = especies
 
-    if not genes_especies:
-        st.error("Nenhum gene foi processado. Verifique os arquivos na pasta.")
-    else:
-        todas_especies = sorted(set.union(*genes_especies.values()))
-        matriz = pd.DataFrame(0, index=sorted(genes_especies.keys()), columns=todas_especies)
+                except Exception as e:
+                    st.warning(f"Erro no arquivo {arquivo}: {e}")
 
-        for gene, especies in genes_especies.items():
-            matriz.loc[gene, list(especies)] = 1
+            if not genes_especies:
+                st.error("Nenhum gene foi processado. Verifique os arquivos no .zip.")
+            else:
+                todas_especies = sorted(set.union(*genes_especies.values()))
+                matriz = pd.DataFrame(0, index=sorted(genes_especies.keys()), columns=todas_especies)
 
-        # === Processamento ===
-        matriz["n_especies"] = matriz.sum(axis=1)
+                for gene, especies in genes_especies.items():
+                    matriz.loc[gene, list(especies)] = 1
 
-        # === Slider ===
-        min_especies = st.slider("Mínimo de espécies representadas por gene", min_value=1, max_value=int(matriz.shape[1]-1), value=10)
+                matriz["n_especies"] = matriz.sum(axis=1)
 
-        matriz_filtrada = matriz[matriz["n_especies"] >= min_especies].drop(columns="n_especies")
-        genes_filtrados = matriz_filtrada.index.tolist()
-        especies_retidas = matriz_filtrada.columns[(matriz_filtrada.sum(axis=0) > 0)].tolist()
+                min_especies = st.slider("Mínimo de espécies representadas por gene", min_value=1, max_value=int(matriz.shape[1]-1), value=10)
 
-        st.markdown(f"✅ Genes mantidos: **{len(genes_filtrados)}**")
-        st.markdown(f"✅ Espécies representadas: **{len(especies_retidas)}**")
+                matriz_filtrada = matriz[matriz["n_especies"] >= min_especies].drop(columns="n_especies")
+                genes_filtrados = matriz_filtrada.index.tolist()
+                especies_retidas = matriz_filtrada.columns[(matriz_filtrada.sum(axis=0) > 0)].tolist()
 
-        if len(genes_filtrados) > 0:
-            fig = px.imshow(
-                matriz_filtrada.loc[genes_filtrados, especies_retidas],
-                labels=dict(x="Espécies", y="Genes", color="Presente"),
-                color_continuous_scale="Blues",
-                aspect="auto"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+                st.markdown(f"✅ Genes mantidos: **{len(genes_filtrados)}**")
+                st.markdown(f"✅ Espécies representadas: **{len(especies_retidas)}**")
 
-        with st.expander("🔍 Ver tabela de genes mantidos"):
-            st.dataframe(matriz_filtrada)
+                if len(genes_filtrados) > 0:
+                    fig = px.imshow(
+                        matriz_filtrada.loc[genes_filtrados, especies_retidas],
+                        labels=dict(x="Espécies", y="Genes", color="Presente"),
+                        color_continuous_scale="Blues",
+                        aspect="auto"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
-        with st.expander("🔍 Ver espécies representadas"):
-            st.dataframe(pd.DataFrame(especies_retidas, columns=["Espécie"]))
+                with st.expander("🔍 Ver tabela de genes mantidos"):
+                    st.dataframe(matriz_filtrada)
 
-        # === Exportar CSV ===
-        matriz_filtrada.to_csv("matriz_genes_especies_filtrada.csv")
-        st.success("Arquivo 'matriz_genes_especies_filtrada.csv' salvo com sucesso.")
+                with st.expander("🔍 Ver espécies representadas"):
+                    st.dataframe(pd.DataFrame(especies_retidas, columns=["Espécie"]))
 
-else:
-    st.info("Informe um caminho válido para iniciar a análise.")
+                csv_path = os.path.join(tempdir, "matriz_genes_especies_filtrada.csv")
+                matriz_filtrada.to_csv(csv_path)
+                st.download_button("📥 Baixar CSV filtrado", data=open(csv_path, "rb"), file_name="matriz_filtrada.csv")
