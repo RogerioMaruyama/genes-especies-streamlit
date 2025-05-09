@@ -8,6 +8,7 @@ import os
 import tempfile
 import zipfile
 from Bio import SeqIO
+from io import BytesIO
 
 st.set_page_config(layout="wide")
 
@@ -92,12 +93,11 @@ if zip_file is not None:
                     fig.update_layout(height=altura, width=largura)
                     st.plotly_chart(fig, use_container_width=True)
 
-                    # Exportação de imagem como SVG (compatível com Streamlit Cloud)
-                    st.markdown("### Exportar gráfico como imagem (formato SVG):")
-                    svg_path = os.path.join(tempdir, "heatmap_exportado.svg")
-                    pio.write_image(fig, svg_path, format="svg")
-                    with open(svg_path, "rb") as file:
-                        st.download_button("📤 Baixar gráfico em SVG", data=file, file_name="heatmap.svg")
+                    # Exportar gráfico como HTML interativo
+                    st.markdown("### Exportar gráfico interativo (formato HTML):")
+                    html_buffer = BytesIO()
+                    fig.write_html(html_buffer)
+                    st.download_button("📤 Baixar gráfico como HTML", data=html_buffer.getvalue(), file_name="heatmap_interativo.html")
 
                 with st.expander("🔍 Ver tabela de genes mantidos"):
                     st.dataframe(matriz_filtrada)
