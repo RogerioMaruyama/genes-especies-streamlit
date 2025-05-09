@@ -57,6 +57,8 @@ if zip_file is not None:
 
                 matriz["n_especies"] = matriz.sum(axis=1)
 
+                st.markdown(f"🔢 Total de espécies detectadas na matriz original: **{matriz.shape[1] - 1}**")
+
                 min_especies = st.slider("Mínimo de espécies representadas por gene", min_value=1, max_value=int(matriz.shape[1]-1), value=10)
 
                 matriz_filtrada = matriz[matriz["n_especies"] >= min_especies].drop(columns="n_especies")
@@ -64,7 +66,7 @@ if zip_file is not None:
                 especies_retidas = matriz_filtrada.columns[(matriz_filtrada.sum(axis=0) > 0)].tolist()
 
                 st.markdown(f"✅ Genes mantidos: **{len(genes_filtrados)}**")
-                st.markdown(f"✅ Espécies representadas: **{len(especies_retidas)}**")
+                st.markdown(f"✅ Espécies representadas após filtro: **{len(especies_retidas)}**")
 
                 if len(genes_filtrados) > 0:
                     fig = px.imshow(
