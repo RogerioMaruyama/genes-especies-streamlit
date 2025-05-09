@@ -59,9 +59,19 @@ if zip_file is not None:
 
                 st.markdown(f"🔢 Total de espécies detectadas na matriz original: **{matriz.shape[1] - 1}**")
 
-                min_especies = st.slider("Mínimo de espécies representadas por gene", min_value=1, max_value=int(matriz.shape[1]-1), value=10)
+                min_val, max_val = st.slider(
+                    "Intervalo de espécies representadas por gene",
+                    min_value=1,
+                    max_value=int(matriz.shape[1]-1),
+                    value=(10, 20),
+                    step=1
+                )
 
-                matriz_filtrada = matriz[matriz["n_especies"] >= min_especies].drop(columns="n_especies")
+                matriz_filtrada = matriz[
+                    (matriz["n_especies"] >= min_val) &
+                    (matriz["n_especies"] <= max_val)
+                ].drop(columns="n_especies")
+
                 genes_filtrados = matriz_filtrada.index.tolist()
                 especies_retidas = matriz_filtrada.columns[(matriz_filtrada.sum(axis=0) > 0)].tolist()
 
@@ -69,12 +79,14 @@ if zip_file is not None:
                 st.markdown(f"✅ Espécies representadas após filtro: **{len(especies_retidas)}**")
 
                 if len(genes_filtrados) > 0:
+                    altura = min(max(300, 20 * len(genes_filtrados)), 1200)
                     fig = px.imshow(
                         matriz_filtrada.loc[genes_filtrados, especies_retidas],
                         labels=dict(x="Espécies", y="Genes", color="Presente"),
                         color_continuous_scale="Blues",
                         aspect="auto"
                     )
+                    fig.update_layout(height=altura)
                     st.plotly_chart(fig, use_container_width=True)
 
                 with st.expander("🔍 Ver tabela de genes mantidos"):
