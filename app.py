@@ -90,7 +90,14 @@ if zip_file is not None:
                         color_continuous_scale="Blues",
                         aspect="auto"
                     )
-                    fig.update_layout(height=altura, width=largura)
+                    fig.update_layout(
+                        height=altura,
+                        width=largura,
+                        margin=dict(l=150, b=180, t=50, r=20),
+                        xaxis_tickangle=45,
+                        xaxis_tickfont=dict(size=10),
+                        yaxis_tickfont=dict(size=10)
+                    )
                     st.plotly_chart(fig, use_container_width=True)
 
                     # Exportar gráfico como HTML interativo
