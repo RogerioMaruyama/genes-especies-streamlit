@@ -8,7 +8,7 @@ import os
 import tempfile
 import zipfile
 from Bio import SeqIO
-from io import BytesIO
+from io import StringIO
 
 st.set_page_config(layout="wide")
 
@@ -95,16 +95,23 @@ if zip_file is not None:
 
                     # Exportar gráfico como HTML interativo
                     st.markdown("### Exportar gráfico interativo (formato HTML):")
-                    html_buffer = BytesIO()
+                    html_buffer = StringIO()
                     fig.write_html(html_buffer)
-                    st.download_button("📤 Baixar gráfico como HTML", data=html_buffer.getvalue(), file_name="heatmap_interativo.html")
+                    st.download_button("📤 Baixar gráfico como HTML", data=html_buffer.getvalue(), file_name="heatmap_interativo.html", mime="text/html")
 
                 with st.expander("🔍 Ver tabela de genes mantidos"):
                     st.dataframe(matriz_filtrada)
+                    csv_genes = os.path.join(tempdir, "genes_mantidos.csv")
+                    matriz_filtrada.to_csv(csv_genes)
+                    st.download_button("⬇️ Baixar genes em CSV", data=open(csv_genes, "rb"), file_name="genes_mantidos.csv")
 
                 with st.expander("🔍 Ver espécies representadas"):
-                    st.dataframe(pd.DataFrame(especies_retidas, columns=["Espécie"]))
+                    especies_df = pd.DataFrame(especies_retidas, columns=["Espécie"])
+                    st.dataframe(especies_df)
+                    csv_especies = os.path.join(tempdir, "especies_representadas.csv")
+                    especies_df.to_csv(csv_especies, index=False)
+                    st.download_button("⬇️ Baixar espécies em CSV", data=open(csv_especies, "rb"), file_name="especies_representadas.csv")
 
                 csv_path = os.path.join(tempdir, "matriz_genes_especies_filtrada.csv")
                 matriz_filtrada.to_csv(csv_path)
-                st.download_button("📥 Baixar CSV filtrado", data=open(csv_path, "rb"), file_name="matriz_filtrada.csv")
+                st.download_button("📥 Baixar CSV filtrado (matriz)", data=open(csv_path, "rb"), file_name="matriz_filtrada.csv")
